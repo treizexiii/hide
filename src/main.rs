@@ -13,34 +13,32 @@ fn main() {
     let authors = env!("CARGO_PKG_AUTHORS");
     let about = env!("CARGO_PKG_DESCRIPTION");
 
-
     let matches = Command::new(name)
         .version(version)
         .author(authors)
         .about(about)
         .arg(arg!([file] "File to encrypt/decrypt").required(true).index(1))
         .arg(arg!(-p --passphrase <passphrase> "Passphrase for encryption/decryption"))
-        .arg(arg!(-d --decrypt "Decrypt the file"))
-        .arg(arg!(-v --view "View decrypted content without saving"))
+        .arg(arg!(-d --decrypt "Decrypt the file").conflicts_with("view"))
+        .arg(arg!(-v --view "View decrypted content without saving").conflicts_with("decrypt"))
+        .arg_required_else_help(true)
         .get_matches();
-
-    if matches.contains_id("help") {
-        print_help();
-        exit(0);
-    }
 
     let decrypt = matches.get_flag("decrypt");
     let view = matches.get_flag("view");
 
     let file = matches.get_one::<String>("file").unwrap();
 
-    let passphrase: &str;
     let mut must_prompt = !matches.contains_id("passphrase");
-    if matches.contains_id("passphrase") {
-        passphrase = matches.get_one::<String>("passphrase").unwrap();
-        must_prompt = false;
+    let passphrase = if let Some(p) = matches.get_one::<String>("passphrase") {
+        p.to_string()
     } else {
-        passphrase = prompt_passphrase("Enter passphrase: ");
+        prompt_passphrase("Enter passphrase: ")
+    };
+
+    if passphrase.is_empty() {
+        eprintln!("Error: passphrase is required");
+        exit(1);
     }
 
     if view {
@@ -72,14 +70,6 @@ fn main() {
     }
 }
 
-fn print_help() {
-    println!("Usage: [options] <file>");
-    println!("Options:");
-    println!("  -h, --help             Show this help message");
-    println!("  -v, --view             View decrypted content");
-    println!("  -d, --decrypt          Decrypt the file");
-    println!("  -p, --passphrase <passphrase>   Provide passphrase directly");
-}
 fn encrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::open(input_file)?;
     let mut content = Vec::new();
@@ -109,11 +99,9 @@ fn decrypt_file(input_file: &str, passphrase: &str) -> Result<String, Box<dyn st
     Ok(String::from_utf8_lossy(&decrypted).into_owned())
 }
 
-fn prompt_passphrase(prompt: &str) -> &str {
+fn prompt_passphrase(prompt: &str) -> String {
     use rpassword::read_password;
     print!("{}", prompt);
     io::stdout().flush().unwrap();
-    let result = read_password().unwrap_or_default().clone();
-
-    Box::leak(result.into_boxed_str())
+    read_password().unwrap_or_default()
 }
