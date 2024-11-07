@@ -1,75 +1,85 @@
 mod utils;
 
 use crate::utils::hasher::{decrypt, encrypt};
-use std::env;
+use clap::{arg, Command};
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::process::exit;
+use std::env;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 || args.len() > 4 {
+    let name = env!("CARGO_PKG_NAME");
+    let version = env!("CARGO_PKG_VERSION");
+    let authors = env!("CARGO_PKG_AUTHORS");
+    let about = env!("CARGO_PKG_DESCRIPTION");
+
+
+    let matches = Command::new(name)
+        .version(version)
+        .author(authors)
+        .about(about)
+        .arg(arg!([file] "File to encrypt/decrypt").required(true).index(1))
+        .arg(arg!(-p --passphrase <passphrase> "Passphrase for encryption/decryption"))
+        .arg(arg!(-d --decrypt "Decrypt the file"))
+        .arg(arg!(-v --view "View decrypted content without saving"))
+        .get_matches();
+
+    if matches.contains_id("help") {
         print_help();
-        exit(1);
+        exit(0);
     }
 
-    let flag = if args.len() == 3 { &args[1] } else { "" };
-    let file = if args.len() == 3 { &args[2] } else { &args[1] };
+    let decrypt = matches.get_flag("decrypt");
+    let view = matches.get_flag("view");
 
-    let passphrase = prompt_passphrase("Enter passphrase: ");
+    let file = matches.get_one::<String>("file").unwrap();
 
-    match flag {
-        "-h" => {
-            print_help();
-            exit(0);
+    let passphrase: &str;
+    let mut must_prompt = !matches.contains_id("passphrase");
+    if matches.contains_id("passphrase") {
+        passphrase = matches.get_one::<String>("passphrase").unwrap();
+        must_prompt = false;
+    } else {
+        passphrase = prompt_passphrase("Enter passphrase: ");
+    }
+
+    if view {
+        match decrypt_file(file, &passphrase) {
+            Ok(content) => println!("{}", content),
+            Err(e) => eprintln!("Failed to decrypt file: {}", e),
         }
-        "-v" => {
-            match decrypt_file(file, &passphrase) {
-                Ok(content) => println!("{}", content),
-                Err(e) => eprintln!("Failed to decrypt file: {}", e),
-            }
+    } else if decrypt {
+        let decrypted_file = format!("{}", file);
+        if let Err(e) = decrypt_to_file(file, &decrypted_file, &passphrase) {
+            eprintln!("Failed to decrypt file: {}", e);
+        } else {
+            println!("File decrypted");
         }
-        "-d" => {
-            // remove the .enc extension
-            // let decrypted_file = file.replace(".enc", "");
-            // // remove the . prefix
-            // let decrypted_file = &decrypted_file[1..];
-            let decrypted_file = format!("{}", file);
-
-            if let Err(e) = decrypt_to_file(file, &decrypted_file, &passphrase) {
-                eprintln!("Failed to decrypt file: {}", e);
-            } else {
-                println!("File decrypted");
-            }
-        }
-        _ => {
-            let confirm_passphrase = if flag != "-v" {
-                prompt_passphrase("Confirm passphrase: ")
-            } else {
-                passphrase.clone()
-            };
-
+    } else {
+        if must_prompt {
+            let confirm_passphrase = prompt_passphrase("Confirm passphrase: ");
             if passphrase != confirm_passphrase {
                 eprintln!("Passphrases do not match");
                 exit(1);
             }
-
-            let encrypted_file = format!("{}", file);
-            if let Err(e) = encrypt_to_file(file, &encrypted_file, &passphrase) {
-                eprintln!("Failed to encrypt file: {}", e);
-            } else {
-                println!("File encrypted");
-            }
+        }
+        let encrypted_file = format!("{}", file);
+        if let Err(e) = encrypt_to_file(file, &encrypted_file, &passphrase) {
+            eprintln!("Failed to encrypt file: {}", e);
+        } else {
+            println!("File encrypted");
         }
     }
 }
 
 fn print_help() {
-    println!("Usage: [-v] [-d] <file>");
-    println!("-v: View the contents of the file");
-    println!("-d: Decrypt the file");
+    println!("Usage: [options] <file>");
+    println!("Options:");
+    println!("  -h, --help             Show this help message");
+    println!("  -v, --view             View decrypted content");
+    println!("  -d, --decrypt          Decrypt the file");
+    println!("  -p, --passphrase <passphrase>   Provide passphrase directly");
 }
-
 fn encrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = File::open(input_file)?;
     let mut content = Vec::new();
@@ -99,9 +109,11 @@ fn decrypt_file(input_file: &str, passphrase: &str) -> Result<String, Box<dyn st
     Ok(String::from_utf8_lossy(&decrypted).into_owned())
 }
 
-fn prompt_passphrase(prompt: &str) -> String {
+fn prompt_passphrase(prompt: &str) -> &str {
     use rpassword::read_password;
     print!("{}", prompt);
     io::stdout().flush().unwrap();
-    read_password().unwrap_or_default()
+    let result = read_password().unwrap_or_default().clone();
+
+    Box::leak(result.into_boxed_str())
 }

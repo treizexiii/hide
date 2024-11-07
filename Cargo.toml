@@ -1,9 +1,15 @@
 [package]
 name = "hide"
-version = "0.1.0"
+authors = ["treize <darktreize@hotmail.fr>"]
+version = "0.1.2"
 edition = "2021"
+description = "Hide your files"
 
 [dependencies]
 openssl = "0.10"
 rpassword = "7.3"
 rand = "0.8"
+clap = "4.5"
+
+[profile.release]
+lto = true
