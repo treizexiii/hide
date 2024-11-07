@@ -9,21 +9,7 @@ use std::env;
 use zeroize::Zeroize;
 
 fn main() {
-    let name = env!("CARGO_PKG_NAME");
-    let version = env!("CARGO_PKG_VERSION");
-    let authors = env!("CARGO_PKG_AUTHORS");
-    let about = env!("CARGO_PKG_DESCRIPTION");
-
-    let matches = Command::new(name)
-        .version(version)
-        .author(authors)
-        .about(about)
-        .arg(arg!([file] "File to encrypt/decrypt").required(true).index(1))
-        .arg(arg!(-p --passphrase <passphrase> "Passphrase for encryption/decryption"))
-        .arg(arg!(-d --decrypt "Decrypt the file").conflicts_with("view"))
-        .arg(arg!(-v --view "View decrypted content without saving").conflicts_with("decrypt"))
-        .arg_required_else_help(true)
-        .get_matches();
+    let matches = build_matches();
 
     let decrypt = matches.get_flag("decrypt");
     let view = matches.get_flag("view");
@@ -73,6 +59,20 @@ fn main() {
     passphrase.zeroize();
 
     exit(0);
+}
+
+fn build_matches() -> clap::ArgMatches {
+    let matches = Command::new(env!("CARGO_PKG_NAME"))
+        .version(env!("CARGO_PKG_VERSION"))
+        .author(env!("CARGO_PKG_AUTHORS"))
+        .about(env!("CARGO_PKG_DESCRIPTION"))
+        .arg(arg!([file] "File to encrypt/decrypt").required(true).index(1))
+        .arg(arg!(-p --passphrase <passphrase> "Passphrase for encryption/decryption"))
+        .arg(arg!(-d --decrypt "Decrypt the file").conflicts_with("view"))
+        .arg(arg!(-v --view "View decrypted content without saving").conflicts_with("decrypt"))
+        .arg_required_else_help(true);
+
+    matches.get_matches()
 }
 
 fn encrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Result<(), Box<dyn std::error::Error>> {
