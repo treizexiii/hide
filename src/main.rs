@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::{self, Read, Write};
 use std::process::exit;
 use std::env;
+use zeroize::Zeroize;
 
 fn main() {
     let name = env!("CARGO_PKG_NAME");
@@ -29,8 +30,8 @@ fn main() {
 
     let file = matches.get_one::<String>("file").unwrap();
 
-    let mut must_prompt = !matches.contains_id("passphrase");
-    let passphrase = if let Some(p) = matches.get_one::<String>("passphrase") {
+    let must_prompt = !matches.contains_id("passphrase");
+    let mut  passphrase = if let Some(p) = matches.get_one::<String>("passphrase") {
         p.to_string()
     } else {
         prompt_passphrase("Enter passphrase: ")
@@ -68,10 +69,20 @@ fn main() {
             println!("File encrypted");
         }
     }
+
+    passphrase.zeroize();
+
+    exit(0);
 }
 
 fn encrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mut file = File::open(input_file)?;
+    let mut file = match File::open(input_file) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Failed to open file '{}': {}", input_file, e);
+            exit(1);
+        }
+    };
     let mut content = Vec::new();
     file.read_to_end(&mut content)?;
 
@@ -91,7 +102,13 @@ fn decrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Res
 }
 
 fn decrypt_file(input_file: &str, passphrase: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let mut file = File::open(input_file)?;
+    let mut file = match File::open(input_file) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Failed to open file '{}': {}", input_file, e);
+            exit(1);
+        }
+    };
     let mut content = Vec::new();
     file.read_to_end(&mut content)?;
 

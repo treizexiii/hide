@@ -3,6 +3,7 @@ use openssl::pkcs5::pbkdf2_hmac;
 use openssl::hash::MessageDigest;
 use rand::Rng;
 use std::error::Error;
+use zeroize::Zeroize;
 
 const SALT_LEN: usize = 16;
 const KEY_LEN: usize = 32;
@@ -33,6 +34,11 @@ pub fn encrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>>
     let mut result = Vec::with_capacity(SALT_LEN + encrypted.len());
     result.extend_from_slice(&salt);
     result.extend_from_slice(&encrypted);
+
+    // Efface les données sensibles
+    key.zeroize();
+    iv.zeroize();
+
     Ok(result)
 }
 
@@ -54,6 +60,10 @@ pub fn decrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>>
     let count = crypter.update(encrypted_data, &mut decrypted)?;
     let rest = crypter.finalize(&mut decrypted[count..])?;
     decrypted.truncate(count + rest);
+
+    // Efface les données sensibles
+    key.zeroize();
+    iv.zeroize();
 
     Ok(decrypted)
 }
