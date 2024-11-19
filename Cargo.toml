@@ -6,11 +6,23 @@ edition = "2021"
 description = "Hide your files"
 
 [dependencies]
-openssl = "0.10"
+openssl = { version = "0.10", optional = true }
+ring = { version = "0.17", optional = true }
 rpassword = "7.3"
 rand = "0.8"
 clap = "4.5"
 zeroize = "1.8.1"
 
+[features]
+default = []  # Aucun par défaut pour une meilleure gestion
+use_openssl = ["openssl"]
+use_ring = ["ring"]
+
 [profile.release]
 lto = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+openssl = "0.10"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+ring = "0.17"

@@ -1,12 +1,13 @@
 mod utils;
 
-use crate::utils::hasher::{decrypt, encrypt};
 use clap::{arg, Command};
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::process::exit;
 use std::env;
 use zeroize::Zeroize;
+
+pub use utils::crypto::crypto::{decrypt, encrypt};
 
 fn main() {
     let matches = build_matches();
@@ -116,9 +117,21 @@ fn decrypt_file(input_file: &str, passphrase: &str) -> Result<String, Box<dyn st
     Ok(String::from_utf8_lossy(&decrypted).into_owned())
 }
 
+// #[cfg(not(target_os = "windows"))]
 fn prompt_passphrase(prompt: &str) -> String {
     use rpassword::read_password;
     print!("{}", prompt);
     io::stdout().flush().unwrap();
-    read_password().unwrap_or_default()
+    read_password().unwrap_or_else(|_| {
+        eprintln!("Failed to read passphrase");
+        exit(1);
+    })
 }
+
+// #[cfg(target_os = "windows")]
+// fn prompt_passphrase(prompt: &str) -> String {
+//     use rpassword::read_password_from_bufread;
+//     print!("{}", prompt);
+//     io::stdout().flush().unwrap();
+//     read_password_from_bufread(None).unwrap_or_default()
+// }
