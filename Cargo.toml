@@ -12,6 +12,7 @@ rpassword = "7.3"
 rand = "0.8"
 clap = "4.5"
 zeroize = "1.8.1"
+winapi = "0.3.9"
 
 [features]
 default = []  # Aucun par défaut pour une meilleure gestion

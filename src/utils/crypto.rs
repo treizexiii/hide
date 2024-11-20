@@ -1,14 +1,16 @@
+use super::Result;
+
 #[cfg(target_os = "linux")]
 pub mod crypto {
-    use openssl::symm::{Cipher, Crypter, Mode};
-    use openssl::pkcs5::pbkdf2_hmac;
+    use super::Result;
+    use crate::utils::{Error, ITERATIONS, IV_LEN, KEY_LEN, SALT_LEN};
     use openssl::hash::MessageDigest;
+    use openssl::pkcs5::pbkdf2_hmac;
+    use openssl::symm::{Cipher, Crypter, Mode};
     use rand::Rng;
-    use std::error::Error;
     use zeroize::Zeroize;
-    use crate::utils::{ITERATIONS, IV_LEN, KEY_LEN, SALT_LEN};
 
-    pub fn encrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    pub fn encrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
         let cipher = Cipher::aes_256_cbc();
 
         // Generate a random salt
@@ -18,14 +20,20 @@ pub mod crypto {
         // Derive the key and IV using PBKDF2
         let mut key = [0u8; KEY_LEN];
         let mut iv = [0u8; IV_LEN];
-        pbkdf2_hmac(passphrase.as_bytes(), &salt, ITERATIONS, MessageDigest::sha256(), &mut key)?;
-        pbkdf2_hmac(passphrase.as_bytes(), &salt, ITERATIONS, MessageDigest::sha256(), &mut iv)?;
+        pbkdf2_hmac(passphrase.as_bytes(), &salt, ITERATIONS, MessageDigest::sha256(), &mut key)
+            .or(Err(Error::KeyFailHmac))?;
+
+        pbkdf2_hmac(passphrase.as_bytes(), &salt, ITERATIONS, MessageDigest::sha256(), &mut iv)
+            .or(Err(Error::KeyFailHmac))?;
 
         // Encrypt the data
-        let mut crypter = Crypter::new(cipher, Mode::Encrypt, &key, Some(&iv))?;
+        let mut crypt = Crypter::new(cipher, Mode::Encrypt, &key, Some(&iv))
+            .or(Err(Error::EncryptFail))?;
         let mut encrypted = vec![0; data.len() + cipher.block_size()];
-        let count = crypter.update(data, &mut encrypted)?;
-        let rest = crypter.finalize(&mut encrypted[count..])?;
+        let count = crypt.update(data, &mut encrypted)
+            .or(Err(Error::EncryptFail))?;
+        let rest = crypt.finalize(&mut encrypted[count..])
+            .or(Err(Error::EncryptFail))?;
         encrypted.truncate(count + rest);
 
         // Combine the salt and encrypted data
@@ -40,7 +48,7 @@ pub mod crypto {
         Ok(result)
     }
 
-    pub fn decrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    pub fn decrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
         let cipher = Cipher::aes_256_cbc();
 
         // Extract the salt and encrypted data
@@ -49,14 +57,19 @@ pub mod crypto {
         // Derive the key and IV using PBKDF2
         let mut key = [0u8; KEY_LEN];
         let mut iv = [0u8; IV_LEN];
-        pbkdf2_hmac(passphrase.as_bytes(), salt, ITERATIONS, MessageDigest::sha256(), &mut key)?;
-        pbkdf2_hmac(passphrase.as_bytes(), salt, ITERATIONS, MessageDigest::sha256(), &mut iv)?;
+        pbkdf2_hmac(passphrase.as_bytes(), salt, ITERATIONS, MessageDigest::sha256(), &mut key)
+            .or(Err(Error::KeyFailHmac))?;
+        pbkdf2_hmac(passphrase.as_bytes(), salt, ITERATIONS, MessageDigest::sha256(), &mut iv)
+            .or(Err(Error::KeyFailHmac))?;
 
         // Decrypt the data
-        let mut crypter = Crypter::new(cipher, Mode::Decrypt, &key, Some(&iv))?;
+        let mut crypt = Crypter::new(cipher, Mode::Decrypt, &key, Some(&iv))
+            .or(Err(Error::DecryptFail))?;
         let mut decrypted = vec![0; encrypted_data.len() + cipher.block_size()];
-        let count = crypter.update(encrypted_data, &mut decrypted)?;
-        let rest = crypter.finalize(&mut decrypted[count..])?;
+        let count = crypt.update(encrypted_data, &mut decrypted)
+            .or(Err(Error::DecryptFail))?;
+        let rest = crypt.finalize(&mut decrypted[count..])
+            .or(Err(Error::DecryptFail))?;
         decrypted.truncate(count + rest);
 
         // Efface les données sensibles
@@ -70,13 +83,13 @@ pub mod crypto {
 
 #[cfg(target_os = "windows")]
 pub mod crypto {
+    use crate::utils::crypto::CryptoError;
     use crate::utils::{ITERATIONS, KEY_LEN, NONCE_LEN, SALT_LEN};
     use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
     use ring::pbkdf2;
     use ring::rand::{SecureRandom, SystemRandom};
     use std::num::NonZeroU32;
     use zeroize::Zeroize;
-    use crate::utils::crypto::CryptoError;
 
     pub fn encrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>, CryptoError> {
         let rng = SystemRandom::new();
@@ -148,22 +161,5 @@ pub mod crypto {
         key.zeroize();
 
         Ok(decrypted)
-    }
-}
-
-#[derive(Debug)]
-pub struct CryptoError(String);
-
-impl std::fmt::Display for CryptoError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::error::Error for CryptoError {}
-
-impl From<ring::error::Unspecified> for CryptoError {
-    fn from(_: ring::error::Unspecified) -> Self {
-        CryptoError("Unspecified error in ring".to_string())
     }
 }
