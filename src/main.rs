@@ -38,10 +38,8 @@ fn main() {
                     println!("{}", text);
                 } else {
                     println!("The file is binary and cannot be displayed as text.");
-                    println!("Binary content (hexadecimal):");
-                    for byte in &content {
-                        print!("{:02x} ", byte);
-                    }
+                    let size = content.len() as f64 / 1024.0 / 1024.0;
+                    println!("File size: {:.2} MB", size);
                     println!();
                 }
             }
