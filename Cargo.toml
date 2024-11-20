@@ -1,16 +1,35 @@
 [package]
 name = "hide"
 authors = ["treize <darktreize@hotmail.fr>"]
-version = "0.2.0"
+version = "0.5.0"
 edition = "2021"
 description = "Hide your files"
 
 [dependencies]
-openssl = "0.10"
 rpassword = "7.3"
 rand = "0.8"
 clap = "4.5"
 zeroize = "1.8.1"
 
+# Linux dependencies
+openssl = { version = "0.10", optional = true }
+
+# Windows dependencies
+ring = { version = "0.17", optional = true }
+winapi = { version = "0.3.9", optional = true }
+
+[features]
+default = []
+use_openssl = ["openssl"]
+use_ring = ["ring"]
+windows = ["winapi"]
+
 [profile.release]
 lto = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+openssl = "0.10"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+ring = "0.17"
+winapi = "0.3.9"
