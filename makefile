@@ -1,3 +1,4 @@
+UNAME_S := $(shell uname -s)
 
 build:
 	cargo build --release
@@ -5,7 +6,7 @@ build:
 install: build
 ifeq ($(UNAME_S), Linux)
 	@echo "Installing on Linux"
-	sudo cp target/release/hide /usr/bin
+	cp target/release/hide ~/.local/bin
 else ifeq ($(OS), Windows_NT)
 	@echo "Installing on Windows..."
 	cp target/release/hide $(USERPROFILE)/.local/bin

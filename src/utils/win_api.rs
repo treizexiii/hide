@@ -1,4 +1,4 @@
-// #[cfg(windows)]
+#[cfg(windows)]
 pub mod file_attributes {
     use std::ptr::null_mut;
     use winapi::um::fileapi::SetFileAttributesA;
