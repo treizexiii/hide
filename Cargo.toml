@@ -10,6 +10,7 @@ rpassword = "7.3"
 rand = "0.8"
 clap = "4.5"
 zeroize = "1.8.1"
+sysinfo = "0.32.0"
 
 # Linux dependencies
 openssl = { version = "0.10", optional = true }

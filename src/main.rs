@@ -1,12 +1,15 @@
 mod utils;
 
+use io::stdout;
 use clap::{arg, Command};
 use std::env;
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::process::exit;
+use std::time::Duration;
 use zeroize::Zeroize;
-
+use rpassword::read_password;
+use sysinfo::System;
 pub use utils::crypto::crypto::{decrypt, encrypt};
 #[cfg(windows)]
 use crate::utils::win_api::file_attributes::{hide_file, unhide_file};
@@ -51,7 +54,6 @@ fn main() {
             eprintln!("Failed to decrypt file: {}", e);
         } else {
             println!("File decrypted");
-            // remove old file
             let _ = std::fs::remove_file(file);
         }
     } else {
@@ -67,13 +69,11 @@ fn main() {
             eprintln!("Failed to encrypt file: {}", e);
         } else {
             println!("File encrypted");
-            // remove old file
             let _ = std::fs::remove_file(file);
         }
     }
 
     passphrase.zeroize();
-
     exit(0);
 }
 
@@ -92,6 +92,13 @@ fn build_matches() -> clap::ArgMatches {
 }
 
 fn encrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut system = System::new();
+    system.refresh_cpu_usage();
+    let initial_cpu_usage = system.global_cpu_usage();
+    std::thread::sleep(Duration::from_millis(200));
+
+    let start = std::time::Instant::now();
+
     let mut file = match File::open(input_file) {
         Ok(f) => f,
         Err(e) => {
@@ -112,13 +119,22 @@ fn encrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Res
     #[cfg(windows)]
     hide_file(&file_name)?;
 
+    system.refresh_cpu_usage();
+    let final_cpu_usage = system.global_cpu_usage();
+    let cpu_usage_diff = (final_cpu_usage - initial_cpu_usage).max(0.0);
+
+    let size = content.len() as f64 / 1024.0 / 1024.0;
+
+    println!("Encryption duration:: {:.2?}", start.elapsed());
+    println!("Encryption CPU usage: {:.2}%", cpu_usage_diff);
+    println!("Encrypted file size: {:.2} MB", size);
+
     Ok(())
 }
 
 fn decrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Result<(), Box<dyn std::error::Error>> {
     let content = decrypt_file(input_file, passphrase)?;
 
-    // remove the .enc extension
     let file_name = output_file.trim_start_matches(".");
 
     let mut out = File::create(file_name)?;
@@ -131,6 +147,13 @@ fn decrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Res
 }
 
 fn decrypt_file(input_file: &str, passphrase: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let mut system = System::new();
+    system.refresh_cpu_usage();
+    let initial_cpu_usage = system.global_cpu_usage();
+    std::thread::sleep(Duration::from_millis(200));
+
+    let start = std::time::Instant::now();
+
     let mut file = match File::open(input_file) {
         Ok(f) => f,
         Err(e) => {
@@ -142,13 +165,19 @@ fn decrypt_file(input_file: &str, passphrase: &str) -> Result<Vec<u8>, Box<dyn s
     file.read_to_end(&mut content)?;
 
     let decrypted = decrypt(passphrase, &content)?;
+
+    system.refresh_cpu_usage();
+    let final_cpu_usage = system.global_cpu_usage();
+    let cpu_usage_diff = (final_cpu_usage - initial_cpu_usage).max(0.0);
+
+    println!("Decryption duration: {:.2?}", start.elapsed());
+    println!("Decryption CPU usage: {:.2}%", cpu_usage_diff);
     Ok(decrypted)
 }
 
 fn prompt_passphrase(prompt: &str) -> String {
-    use rpassword::read_password;
     print!("{}", prompt);
-    io::stdout().flush().unwrap();
+    stdout().flush().unwrap();
     read_password().unwrap_or_else(|_| {
         eprintln!("Failed to read passphrase");
         exit(1);
