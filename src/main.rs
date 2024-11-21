@@ -26,8 +26,10 @@ fn main() {
 
     let metadata = std::fs::metadata(&file).unwrap();
     if metadata.is_dir() {
-        // compress folder as TAR
-        target_file = compress_folder(&file, &file, CompressionType::Tar)
+        let compress_type = matches.get_one::<String>("compress")
+            .ok_or(&"tar".to_string())
+            .unwrap();
+        target_file = compress_folder(&file, CompressionType::from_str(&compress_type).unwrap())
             .unwrap_or_else(|e| {
                 eprintln!("Failed to compress folder: {}", e);
                 exit(1);
@@ -35,7 +37,7 @@ fn main() {
     }
 
     let must_prompt = !matches.contains_id("passphrase");
-    let mut  passphrase = if let Some(p) = matches.get_one::<String>("passphrase") {
+    let mut passphrase = if let Some(p) = matches.get_one::<String>("passphrase") {
         p.to_string()
     } else {
         prompt_passphrase("Enter passphrase: ")
@@ -97,6 +99,9 @@ fn build_matches() -> clap::ArgMatches {
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(arg!([file] "File to encrypt/decrypt").required(true).index(1))
         .arg(arg!(-p --passphrase <passphrase> "Passphrase for encryption/decryption"))
+        .arg(arg!(-c --compress <compress> "Compress the file with tar or zip")
+            .value_parser(["tar", "zip"])
+            .default_value("tar"))
         .arg(arg!(-d --decrypt "Decrypt the file").conflicts_with("view"))
         .arg(arg!(-v --view "View decrypted content without saving").conflicts_with("decrypt"))
         .arg_required_else_help(true);
