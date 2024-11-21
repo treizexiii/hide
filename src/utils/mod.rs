@@ -1,4 +1,5 @@
 mod error;
+pub mod compressor;
 pub mod crypto;
 pub mod win_api;
 

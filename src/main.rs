@@ -10,6 +10,7 @@ use std::time::Duration;
 use zeroize::Zeroize;
 use rpassword::read_password;
 use sysinfo::System;
+use utils::compressor::{compress_folder, CompressionType};
 pub use utils::crypto::crypto::{decrypt, encrypt};
 #[cfg(windows)]
 use crate::utils::win_api::file_attributes::{hide_file, unhide_file};
@@ -21,6 +22,17 @@ fn main() {
     let view = matches.get_flag("view");
 
     let file = matches.get_one::<String>("file").unwrap();
+    let mut target_file = file.clone();
+
+    let metadata = std::fs::metadata(&file).unwrap();
+    if metadata.is_dir() {
+        // compress folder as TAR
+        target_file = compress_folder(&file, &file, CompressionType::Tar)
+            .unwrap_or_else(|e| {
+                eprintln!("Failed to compress folder: {}", e);
+                exit(1);
+            });
+    }
 
     let must_prompt = !matches.contains_id("passphrase");
     let mut  passphrase = if let Some(p) = matches.get_one::<String>("passphrase") {
@@ -35,7 +47,7 @@ fn main() {
     }
 
     if view {
-        match decrypt_file(file, &passphrase) {
+        match decrypt_file(&target_file, &passphrase) {
             Ok(content) => {
                 if let Ok(text) = String::from_utf8(content.clone()) {
                     println!("=== File content ===");
@@ -50,12 +62,12 @@ fn main() {
             Err(e) => eprintln!("Failed to decrypt file: {}", e),
         }
     } else if decrypt {
-        let decrypted_file = format!("{}", file);
-        if let Err(e) = decrypt_to_file(file, &decrypted_file, &passphrase) {
+        let decrypted_file = format!("{}", target_file);
+        if let Err(e) = decrypt_to_file(&target_file, &decrypted_file, &passphrase) {
             eprintln!("Failed to decrypt file: {}", e);
         } else {
             println!("File decrypted");
-            let _ = std::fs::remove_file(file);
+            let _ = std::fs::remove_file(target_file);
         }
     } else {
         if must_prompt {
@@ -65,12 +77,12 @@ fn main() {
                 exit(1);
             }
         }
-        let encrypted_file = format!("{}", file);
-        if let Err(e) = encrypt_to_file(file, &encrypted_file, &passphrase) {
+        let encrypted_file = format!("{}", target_file);
+        if let Err(e) = encrypt_to_file(&target_file, &encrypted_file, &passphrase) {
             eprintln!("Failed to encrypt file: {}", e);
         } else {
             println!("File encrypted");
-            let _ = std::fs::remove_file(file);
+            let _ = std::fs::remove_file(target_file);
         }
     }
 
