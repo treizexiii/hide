@@ -18,3 +18,6 @@ ifeq ($(UNAME_S), Linux)
 else ifeq ($(OS), Windows_NT)
 	rm $(USERPROFILE)/.local/bin/hide.exe
 endif
+
+clean:
+	cargo clean

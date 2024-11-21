@@ -38,6 +38,7 @@ fn main() {
         match decrypt_file(file, &passphrase) {
             Ok(content) => {
                 if let Ok(text) = String::from_utf8(content.clone()) {
+                    println!("=== File content ===");
                     println!("{}", text);
                 } else {
                     println!("The file is binary and cannot be displayed as text.");
