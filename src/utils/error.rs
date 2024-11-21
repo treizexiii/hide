@@ -6,6 +6,9 @@ pub enum Error {
     EncryptFail,
     DecryptFail,
     CryptoError {error: String},
+    FolderNotFound,
+    FileCreateFail(String),
+    CompressionFailed,
 }
 
 impl core::fmt::Display for Error {

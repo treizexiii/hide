@@ -11,6 +11,9 @@ rand = "0.8"
 clap = "4.5"
 zeroize = "1.8.1"
 sysinfo = "0.32.0"
+walkdir = "2.5.0"
+tar = "0.4.43"
+zip = "2.2.0"
 
 # Linux dependencies
 openssl = { version = "0.10", optional = true }
