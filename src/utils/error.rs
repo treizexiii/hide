@@ -9,6 +9,7 @@ pub enum Error {
     FolderNotFound,
     FileCreateFail(String),
     CompressionFailed,
+    WindowsCommandFail,
 }
 
 impl core::fmt::Display for Error {

@@ -1,7 +1,7 @@
 mod error;
 pub mod compressor;
 pub mod crypto;
-pub mod win_api;
+pub mod windows_commands;
 
 pub use self::error::{Error, Result};
 

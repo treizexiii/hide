@@ -1,19 +1,18 @@
 mod utils;
 
-use io::stdout;
+use crate::utils::windows_commands::{hide_file_windows, unhide_file_windows};
 use clap::{arg, Command};
+use io::stdout;
+use rpassword::read_password;
 use std::env;
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::process::exit;
 use std::time::Duration;
-use zeroize::Zeroize;
-use rpassword::read_password;
 use sysinfo::System;
 use utils::compressor::{compress_folder, CompressionType};
 pub use utils::crypto::crypto::{decrypt, encrypt};
-#[cfg(windows)]
-use crate::utils::win_api::file_attributes::{hide_file, unhide_file};
+use zeroize::Zeroize;
 
 fn main() {
     let matches = build_matches();
@@ -26,7 +25,8 @@ fn main() {
 
     let metadata = std::fs::metadata(&file).unwrap();
     if metadata.is_dir() {
-        let compress_type = matches.get_one::<String>("compress")
+        let compress_type = matches
+            .get_one::<String>("compress")
             .ok_or(&"tar".to_string())
             .unwrap();
         target_file = compress_folder(&file, CompressionType::from_str(&compress_type).unwrap())
@@ -97,11 +97,17 @@ fn build_matches() -> clap::ArgMatches {
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
-        .arg(arg!([file] "File to encrypt/decrypt").required(true).index(1))
+        .arg(
+            arg!([file] "File to encrypt/decrypt")
+                .required(true)
+                .index(1),
+        )
         .arg(arg!(-p --passphrase <passphrase> "Passphrase for encryption/decryption"))
-        .arg(arg!(-c --compress <compress> "Compress the file with tar or zip")
-            .value_parser(["tar", "zip"])
-            .default_value("tar"))
+        .arg(
+            arg!(-c --compress <compress> "Compress the file with tar or zip")
+                .value_parser(["tar", "zip"])
+                .default_value("tar"),
+        )
         .arg(arg!(-d --decrypt "Decrypt the file").conflicts_with("view"))
         .arg(arg!(-v --view "View decrypted content without saving").conflicts_with("decrypt"))
         .arg_required_else_help(true);
@@ -109,7 +115,11 @@ fn build_matches() -> clap::ArgMatches {
     matches.get_matches()
 }
 
-fn encrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn encrypt_to_file(
+    input_file: &str,
+    output_file: &str,
+    passphrase: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut system = System::new();
     system.refresh_cpu_usage();
     let initial_cpu_usage = system.global_cpu_usage();
@@ -134,8 +144,8 @@ fn encrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Res
     let mut out = File::create(&file_name)?;
     out.write_all(&encrypted_content)?;
 
-    #[cfg(windows)]
-    hide_file(&file_name)?;
+    #[cfg(target_os = "windows")]
+    hide_file_windows(&file_name)?;
 
     system.refresh_cpu_usage();
     let final_cpu_usage = system.global_cpu_usage();
@@ -150,7 +160,11 @@ fn encrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Res
     Ok(())
 }
 
-fn decrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn decrypt_to_file(
+    input_file: &str,
+    output_file: &str,
+    passphrase: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let content = decrypt_file(input_file, passphrase)?;
 
     let file_name = output_file.trim_start_matches(".");
@@ -158,8 +172,8 @@ fn decrypt_to_file(input_file: &str, output_file: &str, passphrase: &str) -> Res
     let mut out = File::create(file_name)?;
     out.write_all(&content)?;
 
-    #[cfg(windows)]
-    unhide_file(&file_name)?;
+    #[cfg(target_os = "windows")]
+    unhide_file_windows(&file_name)?;
 
     Ok(())
 }

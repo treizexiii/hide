@@ -83,7 +83,7 @@ pub mod crypto {
 
 #[cfg(target_os = "windows")]
 pub mod crypto {
-    use crate::utils::crypto::CryptoError;
+    use super::Result;
     use crate::utils::{ITERATIONS, KEY_LEN, NONCE_LEN, SALT_LEN};
     use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
     use ring::pbkdf2;
@@ -91,7 +91,7 @@ pub mod crypto {
     use std::num::NonZeroU32;
     use zeroize::Zeroize;
 
-    pub fn encrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    pub fn encrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
         let rng = SystemRandom::new();
 
         // Generate a random salt
@@ -133,7 +133,7 @@ pub mod crypto {
         Ok(result)
     }
 
-    pub fn decrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    pub fn decrypt(passphrase: &str, data: &[u8]) -> Result<Vec<u8>> {
         // Extract the salt, nonce, and encrypted data
         let (salt, rest) = data.split_at(SALT_LEN);
         let (nonce_bytes, encrypted_data) = rest.split_at(NONCE_LEN);
