@@ -1,6 +1,5 @@
 mod utils;
 
-use crate::utils::windows_commands::{hide_file_windows, unhide_file_windows};
 use clap::{arg, Command};
 use io::stdout;
 use rpassword::read_password;
@@ -145,7 +144,10 @@ fn encrypt_to_file(
     out.write_all(&encrypted_content)?;
 
     #[cfg(target_os = "windows")]
-    hide_file_windows(&file_name)?;
+    {
+        use crate::utils::windows_commands::{hide_file_windows, unhide_file_windows};
+        hide_file_windows(&file_name)?;
+    }
 
     system.refresh_cpu_usage();
     let final_cpu_usage = system.global_cpu_usage();
@@ -173,7 +175,10 @@ fn decrypt_to_file(
     out.write_all(&content)?;
 
     #[cfg(target_os = "windows")]
-    unhide_file_windows(&file_name)?;
+    {
+        use crate::utils::windows_commands::{hide_file_windows, unhide_file_windows};
+        unhide_file_windows(&file_name)?;
+    }
 
     Ok(())
 }
