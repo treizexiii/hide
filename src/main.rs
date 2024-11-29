@@ -10,7 +10,7 @@ use std::process::exit;
 use std::time::Duration;
 use sysinfo::System;
 use utils::compressor::{compress_folder, CompressionType};
-pub use utils::crypto::crypto::{decrypt, encrypt};
+pub use utils::crypto::{decrypt, encrypt};
 use zeroize::Zeroize;
 
 fn main() {
@@ -139,7 +139,6 @@ fn encrypt_to_file(
     let encrypted_content = encrypt(passphrase, &content)?;
 
     let file_name = format!(".{}", output_file);
-
     let mut out = File::create(&file_name)?;
     out.write_all(&encrypted_content)?;
 

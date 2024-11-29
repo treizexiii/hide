@@ -1,9 +1,8 @@
-use std::path::Path;
-use std::process::Command;
-use super::{Error, Result};
-
 #[cfg(target_os = "windows")]
 pub fn hide_file_windows(file_path: &str) -> Result<()> {
+    use super::{Error, Result};
+    use std::path::Path;
+    use std::process::Command;
     let file_path = Path::new(file_path);
     let command = format!("attrib +h +s +r \"{}\"", file_path.display());
     let output = Command::new("cmd")
@@ -18,6 +17,9 @@ pub fn hide_file_windows(file_path: &str) -> Result<()> {
 
 #[cfg(target_os = "windows")]
 pub fn unhide_file_windows(file_path: &str) -> Result<()> {
+    use super::{Error, Result};
+    use std::path::Path;
+    use std::process::Command;
     let file_path = Path::new(file_path);
     let command = format!("attrib -h -s -r \"{}\"", file_path.display());
     let output = Command::new("cmd")

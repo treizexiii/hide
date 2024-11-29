@@ -20,10 +20,8 @@ impl core::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-#[cfg(target_os = "windows")]
 impl From<ring::error::Unspecified> for Error {
     fn from(_: ring::error::Unspecified) -> Self {
         Error::CryptoError {error: "Unspecified error in ring".to_string()}
-        // CryptoError("Unspecified error in ring".to_string())
     }
 }
