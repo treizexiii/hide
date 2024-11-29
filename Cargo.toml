@@ -1,9 +1,9 @@
 [package]
 name = "hide"
 authors = ["treize <darktreize@hotmail.fr>"]
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
-description = "Hide your files"
+description = "Hide your files v0.6.0"
 
 [dependencies]
 rpassword = "7.3"
