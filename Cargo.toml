@@ -14,26 +14,14 @@ sysinfo = "0.32.0"
 walkdir = "2.5.0"
 tar = "0.4.43"
 zip = "2.2.0"
-
-# Linux dependencies
-openssl = { version = "0.10", optional = true }
-
-# Windows dependencies
-ring = { version = "0.17", optional = true }
+ring = "0.17"
 
 [features]
 default = []
-use_openssl = ["openssl"]
-use_ring = ["ring"]
 windows = ["winapi"]
 
 [profile.release]
 lto = true
 
-[target.'cfg(target_os = "linux")'.dependencies]
-openssl = "0.10"
-ring = "0.17"
-
 [target.'cfg(target_os = "windows")'.dependencies]
-ring = "0.17"
 winapi = { version = "0.3", optional = true, features = ["fileapi", "winnt"] }
