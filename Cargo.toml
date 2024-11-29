@@ -1,9 +1,9 @@
 [package]
 name = "hide"
 authors = ["treize <darktreize@hotmail.fr>"]
-version = "0.6.0"
+version = "0.6.1"
 edition = "2021"
-description = "Hide your files v0.6.0"
+description = "Hide your files v0.6.1"
 
 [dependencies]
 rpassword = "7.3"
@@ -18,10 +18,10 @@ ring = "0.17"
 
 [features]
 default = []
-windows = ["winapi"]
+# windows = ["winapi"]
 
 [profile.release]
 lto = true
 
-[target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3", optional = true, features = ["fileapi", "winnt"] }
+# [target.'cfg(target_os = "windows")'.dependencies]
+# winapi = { version = "0.3", optional = true, features = ["fileapi", "winnt"] }

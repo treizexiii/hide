@@ -386,7 +386,7 @@ checksum = "bf151400ff0baff5465007dd2f3e717f3fe502074ca563069ce3a6629d07b289"
 
 [[package]]
 name = "hide"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "clap",
  "rand",
@@ -395,7 +395,6 @@ dependencies = [
  "sysinfo",
  "tar",
  "walkdir",
- "winapi",
  "zeroize",
  "zip",
 ]
