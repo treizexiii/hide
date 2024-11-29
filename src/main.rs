@@ -145,8 +145,7 @@ fn encrypt_to_file(
 
     #[cfg(target_os = "windows")]
     {
-        use crate::utils::windows_commands::{hide_file_windows, unhide_file_windows};
-        hide_file_windows(&file_name)?;
+        utils::windows_commands::hide_file_windows(&file_name)?;
     }
 
     system.refresh_cpu_usage();
@@ -176,8 +175,7 @@ fn decrypt_to_file(
 
     #[cfg(target_os = "windows")]
     {
-        use crate::utils::windows_commands::{hide_file_windows, unhide_file_windows};
-        unhide_file_windows(&file_name)?;
+        utils::windows_commands::unhide_file_windows(&file_name)?;
     }
 
     Ok(())
