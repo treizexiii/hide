@@ -21,6 +21,13 @@ fn main() {
 
     let file = matches.get_one::<String>("file").unwrap();
     let mut target_file = file.clone();
+    #[cfg(target_os = "windows")]
+    {
+        // remove .\ from the file path
+        if file.starts_with(".\\") {
+            target_file = file.trim_start_matches(".\\").to_string();
+        }
+    }
 
     let metadata = std::fs::metadata(&file).unwrap();
     if metadata.is_dir() {
@@ -139,6 +146,7 @@ fn encrypt_to_file(
     let encrypted_content = encrypt(passphrase, &content)?;
 
     let file_name = format!(".{}", output_file);
+
     let mut out = File::create(&file_name)?;
     out.write_all(&encrypted_content)?;
 
