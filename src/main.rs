@@ -23,7 +23,6 @@ fn main() {
     let mut target_file = file.clone();
     #[cfg(target_os = "windows")]
     {
-        // remove .\ from the file path
         if file.starts_with(".\\") {
             target_file = file.trim_start_matches(".\\").to_string();
         }
