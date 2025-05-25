@@ -7,11 +7,13 @@ use std::env;
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::process::exit;
-use std::time::Duration;
-use sysinfo::System;
 use utils::compressor::{compress_folder, CompressionType};
 pub use utils::crypto::{decrypt, encrypt};
 use zeroize::Zeroize;
+#[cfg(not(target_os = "macos"))]
+use std::time::Duration;
+#[cfg(not(target_os = "macos"))]
+use sysinfo::{System, SystemExt};
 
 fn main() {
     let matches = build_matches();
@@ -125,12 +127,18 @@ fn encrypt_to_file(
     output_file: &str,
     passphrase: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut system = System::new();
-    system.refresh_cpu_usage();
-    let initial_cpu_usage = system.global_cpu_usage();
-    std::thread::sleep(Duration::from_millis(200));
-
-    let start = std::time::Instant::now();
+    #[cfg(not(target_os = "macos"))]
+    let (mut system, initial_cpu_usage) = {
+        let mut sys = System::new();
+        sys.refresh_cpu();
+        let initial = sys.global_cpu_info().cpu_usage();
+        std::thread::sleep(Duration::from_millis(200));
+        (sys, initial)
+    };
+    #[cfg(target_os = "macos")]
+    let start_time = std::time::Instant::now();
+    #[cfg(not(target_os = "macos"))]
+    let start_time = std::time::Instant::now();
 
     let mut file = match File::open(input_file) {
         Ok(f) => f,
@@ -154,14 +162,16 @@ fn encrypt_to_file(
         utils::windows_commands::hide_file_windows(&file_name)?;
     }
 
-    system.refresh_cpu_usage();
-    let final_cpu_usage = system.global_cpu_usage();
-    let cpu_usage_diff = (final_cpu_usage - initial_cpu_usage).max(0.0);
+    #[cfg(not(target_os = "macos"))]
+    {
+        system.refresh_cpu();
+        let final_cpu_usage = system.global_cpu_info().cpu_usage();
+        let cpu_usage_diff = (final_cpu_usage - initial_cpu_usage).max(0.0);
+        println!("Decryption CPU usage: {:.2}%", cpu_usage_diff);
+    }
 
+    println!("Decryption duration: {:.2?}", start_time.elapsed());
     let size = content.len() as f64 / 1024.0 / 1024.0;
-
-    println!("Encryption duration:: {:.2?}", start.elapsed());
-    println!("Encryption CPU usage: {:.2}%", cpu_usage_diff);
     println!("Encrypted file size: {:.2} MB", size);
 
     Ok(())
@@ -188,12 +198,20 @@ fn decrypt_to_file(
 }
 
 fn decrypt_file(input_file: &str, passphrase: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let mut system = System::new();
-    system.refresh_cpu_usage();
-    let initial_cpu_usage = system.global_cpu_usage();
-    std::thread::sleep(Duration::from_millis(200));
+    #[cfg(not(target_os = "macos"))]
+    let (mut system, initial_cpu_usage) = {
+        let mut sys = System::new();
+        sys.refresh_cpu();
+        let initial = sys.global_cpu_info().cpu_usage();
+        std::thread::sleep(Duration::from_millis(200));
+        (sys, initial)
+    };
 
-    let start = std::time::Instant::now();
+    #[cfg(target_os = "macos")]
+    let start_time = std::time::Instant::now();
+
+    #[cfg(not(target_os = "macos"))]
+    let start_time = std::time::Instant::now();
 
     let mut file = match File::open(input_file) {
         Ok(f) => f,
@@ -207,12 +225,14 @@ fn decrypt_file(input_file: &str, passphrase: &str) -> Result<Vec<u8>, Box<dyn s
 
     let decrypted = decrypt(passphrase, &content)?;
 
-    system.refresh_cpu_usage();
-    let final_cpu_usage = system.global_cpu_usage();
-    let cpu_usage_diff = (final_cpu_usage - initial_cpu_usage).max(0.0);
-
-    println!("Decryption duration: {:.2?}", start.elapsed());
-    println!("Decryption CPU usage: {:.2}%", cpu_usage_diff);
+    #[cfg(not(target_os = "macos"))]
+    {
+        system.refresh_cpu();
+        let final_cpu_usage = system.global_cpu_info().cpu_usage();
+        let cpu_usage_diff = (final_cpu_usage - initial_cpu_usage).max(0.0);
+        println!("Decryption CPU usage: {:.2}%", cpu_usage_diff);
+    }
+    println!("Decryption duration: {:.2?}", start_time.elapsed());
     Ok(decrypted)
 }
 

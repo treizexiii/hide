@@ -10,6 +10,12 @@ ifeq ($(UNAME_S), Linux)
 else ifeq ($(OS), Windows_NT)
 	@echo "Installing on Windows..."
 	cp target/release/hide $(USERPROFILE)/.local/bin
+else ifeq ($(UNAME_S), Darwin)
+	@echo "Installing on macOS..."
+	cp target/release/hide ~/.local/bin
+else
+	@echo "Unsupported OS: $(UNAME_S)"
+	exit 1
 endif
 
 uninstall:
